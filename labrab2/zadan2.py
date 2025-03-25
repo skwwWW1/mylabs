@@ -1,60 +1,56 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
+
 import sys
 import os
 
-class ValidationError(Exception):
-    pass
+def is_valid_name(s):
+    if not s or not s[0].isupper():
+        return False, "Name does not start with a capital letter."
+    if not all(c.isalpha() for c in s):
+        return False, "Name contains invalid characters (only letters are allowed)."
+    return True, ""
 
-def validate_name(name):
-    if not name[0].isupper():
-        raise ValidationError("Имя не начинается с заглавной буквы.")
-    if not name.isalpha():
-        raise ValidationError("Имя содержит недопустимые символы (разрешены только буквы).")
+def print_greeting(n):
+    print(f"Добрый день, {n}!")
 
-def greet(name):
-    print(f"Привет, {name}!")
-
-def greet_from_file(filename):
-    try:
-        with open(filename, "r") as file:
-            for line in file:
-                name = line.strip()
-                try:
-                    validate_name(name)
-                    greet(name)
-                except ValidationError as e:
-                    with open("error.txt", "a") as error_file:
-                        error_file.write(f"Неверное имя '{name}': {e}\n")
-    except FileNotFoundError:
-        sys.stderr.write(f"Ошибка: Файл '{filename}' не найдено.\n")
+def handle_file(filepath):
+    if not os.path.isfile(filepath):
+        print(f"Ошибка: '{filepath}' не является файлом", file=sys.stderr)
         return
-    except Exception as e:
-        sys.stderr.write(f"Ошибка в greet_from_file: {e}\n")
-        return
+    with open(filepath, "r") as source:
+        for item in source:
+            name = item.strip()
+            valid, error = is_valid_name(name)
+            if valid:
+                print_greeting(name)
+            else:
+                with open("errors.log", "a") as err_log:
+                    err_log.write(f"Invalid name '{name}': {error}\n")
 
-def interactive_greeting():
+def process_input():
+    print("Введите имена (для завершения нажмите Ctrl+D):")
     while True:
         try:
-            name = input("Пожалуйста, введите свое имя: ").strip()
-            try:
-                validate_name(name)
-                greet(name)
-            except ValidationError as e:
-                with open("error.txt", "a") as error_file:
-                    error_file.write(f"Неверное имя '{name}': {e}\n")
-                continue
+            entry = input("Имя: ").strip()
+            valid, error = is_valid_name(entry)
+            if valid:
+                print_greeting(entry)
+            else:
+                with open("errors.log", "a") as err_log:
+                    err_log.write(f"Invalid name '{entry}': {error}\n")
+        except EOFError:
+            print("\nПрограмма завершена.")
+            break
         except KeyboardInterrupt:
-            print("\nДо свидания!")
-            sys.exit(0)
-        except Exception as e:
-            sys.stderr.write(f"Неожиданная ошибка: {e}\n")
+            print("\nДо новых встреч!")
+            break
+
+def main():
+    if len(sys.argv) == 2:
+        handle_file(sys.argv[1])
+    else:
+        process_input()
+    return
 
 if __name__ == "__main__":
-    if len(sys.argv) == 2:
-        filename = sys.argv[1]
-        if os.path.isfile(filename):
-            greet_from_file(filename)
-        else:
-            sys.stderr.write(f"Ошибка: '{filename}' недопустимый файл.\n")
-    else:
-        interactive_greeting()
+    main()
